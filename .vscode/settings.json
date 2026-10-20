@@ -1,0 +1,9 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^powershell\\.exe -NoProfile -Command \"\\$ports = Get-NetTCPConnection -ErrorAction SilentlyContinue \\| Where-Object \\{ \\$_\\.LocalPort -eq 8123 \\} \\| Select-Object -ExpandProperty OwningProcess -Unique; foreach \\(\\$pid in \\$ports\\) \\{ Write-Output \\\\\"Stopping PID \\$pid\\\\\"; Stop-Process -Id \\$pid -Force -ErrorAction SilentlyContinue \\}; if \\(-not \\$ports\\) \\{ Write-Output 'No server on port 8123' \\}\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  },
+  "chat.byokUtilityModelDefault": "mainAgent"
+}
