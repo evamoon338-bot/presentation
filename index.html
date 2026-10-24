@@ -4503,10 +4503,15 @@
         });
       });
 
+      // Empty when the page is served by the API itself (local dev / single-origin).
+      const API_BASE = window.location.hostname.endsWith("workers.dev")
+        ? ""
+        : "https://circle.evamoon338.workers.dev";
+
       async function apiRequest(path, options = {}) {
-        const response = await fetch(`/api/${path}`, {
+        const response = await fetch(`${API_BASE}/api/${path}`, {
           method: options.method || "GET",
-          credentials: "same-origin",
+          credentials: API_BASE ? "include" : "same-origin",
           cache: "no-store",
           headers: options.body
             ? { "Content-Type": "application/json" }

@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f7f8" />
+    <title>Manage posts — Circle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d2430;
+        --muted: #707887;
+        --line: #e7e7ed;
+        --paper: #fff;
+        --canvas: #f6f7f8;
+        --field: #f2f3f6;
+        --text-soft: #596673;
+        --blue: #e84f70;
+        --red: #bd3d35;
+        font-family: "DM Sans", sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+      .topbar {
+        position: sticky;
+        z-index: 5;
+        top: 0;
+        height: 66px;
+        border-bottom: 1px solid var(--line);
+        background: var(--paper);
+        backdrop-filter: blur(12px);
+      }
+      .topbar-inner {
+        display: flex;
+        width: min(1180px, 100%);
+        height: 100%;
+        align-items: center;
+        justify-content: space-between;
+        margin: auto;
+        padding: 0 28px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+        font:
+          800 22px Manrope,
+          sans-serif;
+        text-decoration: none;
+      }
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--blue);
+        color: white;
+        font-size: 16px;
+        transform: rotate(-4deg);
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-soft);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--blue);
+      }
+      main {
+        width: min(980px, 100%);
+        margin: 0 auto;
+        padding: 42px 24px 72px;
+      }
+      .page-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 25px;
+        border-bottom: 1px solid var(--line);
+      }
+      .eyebrow {
+        margin: 0 0 7px;
+        color: var(--text-soft);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font:
+          700 30px Manrope,
+          sans-serif;
+      }
+      .subtitle {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .post-count {
+        padding: 0 0 4px;
+        color: var(--text-soft);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 0;
+      }
+      .search-wrap {
+        position: relative;
+        flex: 1;
+      }
+      .search-wrap svg {
+        position: absolute;
+        top: 12px;
+        left: 13px;
+        color: var(--muted);
+        pointer-events: none;
+      }
+      .search,
+      .filter {
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .search {
+        width: 100%;
+        padding: 0 14px 0 40px;
+        outline: 0;
+      }
+      .search:focus,
+      .filter:focus {
+        border-color: #91aaf2;
+        outline: 3px solid rgb(232 79 112 / 14%);
+      }
+      .filter {
+        min-width: 140px;
+        padding: 0 32px 0 12px;
+      }
+      #post-list {
+        display: grid;
+        gap: 14px;
+      }
+      .post-card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        animation: rise-in 0.3s ease both;
+      }
+      @keyframes rise-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .post-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 21px 15px;
+      }
+      .post-copy {
+        min-width: 0;
+      }
+      .post-copy p {
+        margin: 0;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+      .post-time {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .delete-post,
+      .delete-photo {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 0 11px;
+        border: 1px solid #ead8d6;
+        border-radius: 5px;
+        background: #fff;
+        color: var(--red);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          background 0.16s,
+          border-color 0.16s;
+      }
+      .delete-post:hover,
+      .delete-photo:hover {
+        border-color: #d7aaa6;
+        background: #fff4f2;
+      }
+      .delete-post:disabled,
+      .delete-photo:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        overflow: hidden;
+        background: var(--field);
+      }
+      .photo-item {
+        position: relative;
+        aspect-ratio: 1.35;
+        min-width: 0;
+        background: var(--field);
+      }
+      .photo-item img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .delete-photo {
+        position: absolute;
+        top: 9px;
+        right: 9px;
+        width: 34px;
+        min-height: 34px;
+        padding: 0;
+        border-color: rgb(255 255 255 / 78%);
+        border-radius: 50%;
+        background: rgb(255 255 255 / 94%);
+        box-shadow: 0 2px 8px rgb(0 0 0 / 16%);
+      }
+      .photo-label {
+        position: absolute;
+        bottom: 9px;
+        left: 10px;
+        padding: 4px 7px;
+        border-radius: 3px;
+        background: rgb(20 29 39 / 72%);
+        color: white;
+        font-size: 11px;
+      }
+      .empty-state,
+      .message-state {
+        padding: 46px 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        text-align: center;
+      }
+      .message-state h2 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font:
+          700 18px Manrope,
+          sans-serif;
+      }
+      .message-state p {
+        margin: 0 0 16px;
+      }
+      .message-state a {
+        color: var(--blue);
+        font-weight: 700;
+      }
+      .toast {
+        position: fixed;
+        z-index: 10;
+        right: 24px;
+        bottom: 24px;
+        max-width: min(360px, calc(100vw - 32px));
+        padding: 13px 16px;
+        border-radius: 6px;
+        background: #172230;
+        color: white;
+        box-shadow: 0 6px 24px rgb(23 34 48 / 20%);
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 620px) {
+        .topbar-inner {
+          padding: 0 17px;
+        }
+        main {
+          padding: 29px 15px 52px;
+        }
+        .page-heading {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+        }
+        h1 {
+          font-size: 25px;
+        }
+        .toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+        .filter {
+          width: 100%;
+        }
+        .post-row {
+          padding: 16px 15px 13px;
+        }
+        .post-copy p {
+          font-size: 13px;
+        }
+        .delete-post {
+          min-height: 34px;
+          padding: 0 8px;
+        }
+        .photo-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --ink: #f5eff7;
+        --muted: #b4abba;
+        --line: #3a3441;
+        --paper: #211e27;
+        --canvas: #17151c;
+        --field: #2d2934;
+        --text-soft: #cbc3cf;
+        --blue: #ff7892;
+        --red: #ff929f;
+      }
+      :root[data-theme="dark"] body {
+        background: var(--canvas);
+        color: var(--ink);
+      }
+      :root[data-theme="dark"] .topbar,
+      :root[data-theme="dark"] .post-card,
+      :root[data-theme="dark"] .search,
+      :root[data-theme="dark"] .filter {
+        border-color: var(--line);
+        background: var(--paper);
+        color: var(--ink);
+      }
+      :root[data-theme="dark"] .page-heading {
+        border-color: var(--line);
+      }
+      :root[data-theme="dark"] .subtitle,
+      :root[data-theme="dark"] .eyebrow,
+      :root[data-theme="dark"] .post-count,
+      :root[data-theme="dark"] .back-link,
+      :root[data-theme="dark"] .post-time {
+        color: var(--muted);
+      }
+      :root[data-theme="dark"] .photo-grid,
+      :root[data-theme="dark"] .photo-item {
+        background: var(--field);
+      }
+      :root[data-theme="dark"] .delete-post,
+      :root[data-theme="dark"] .delete-photo {
+        border-color: #65404a;
+        background: #30242d;
+        color: var(--red);
+      }
+      :root[data-theme="dark"] .delete-post:hover,
+      :root[data-theme="dark"] .delete-photo:hover {
+        border-color: var(--red);
+        background: #452530;
+      }
+      :root[data-theme="dark"] .empty-state,
+      :root[data-theme="dark"] .message-state {
+        border-color: var(--line);
+        color: var(--muted);
+      }
+      :root[data-theme="dark"] .message-state h2 {
+        color: var(--ink);
+      }
+      :root[data-theme="dark"] .toast {
+        background: #f5eff7;
+        color: #211e27;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="Circle home"
+          ><span class="brand-mark" aria-hidden="true">c</span>circle</a
+        >
+        <a class="back-link" href="/">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m14.5 5-7 7 7 7M8 12h12"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Back to feed
+        </a>
+      </div>
+    </header>
+    <main>
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Your Circle</p>
+          <h1 id="page-title">Post &amp; photo manager</h1>
+          <p class="subtitle">Your shared moments, all in one place.</p>
+        </div>
+        <div class="post-count" id="post-count" aria-live="polite">
+          Loading posts…
+        </div>
+      </section>
+      <section id="manager" aria-label="Your posts">
+        <div class="toolbar">
+          <label class="search-wrap">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="10.8"
+                cy="10.8"
+                r="6.3"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <path
+                d="m16 16 4.4 4.4"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+            </svg>
+            <input
+              class="search"
+              id="search"
+              type="search"
+              aria-label="Search your posts"
+              placeholder="Search your posts"
+            />
+          </label>
+          <select class="filter" id="filter" aria-label="Filter posts">
+            <option value="all">All posts</option>
+            <option value="photos">With photos</option>
+            <option value="text">Text only</option>
+          </select>
+        </div>
+        <div id="post-list" aria-live="polite">
+          <div class="empty-state">Loading your posts…</div>
+        </div>
+      </section>
+      <section class="message-state" id="signed-out" hidden>
+        <h2>Sign in to continue</h2>
+        <p>Your post manager uses your Circle account.</p>
+        <a href="/">Go to Circle sign in</a>
+      </section>
+    </main>
+    <script>
+      const postList = document.querySelector("#post-list");
+      const postCount = document.querySelector("#post-count");
+      const searchInput = document.querySelector("#search");
+      const filterSelect = document.querySelector("#filter");
+      let ownedPosts = [];
+      let toastTimer;
+
+      function applyTheme(theme) {
+        const selectedTheme = theme === "dark" ? "dark" : "light";
+        document.documentElement.dataset.theme = selectedTheme;
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) {
+          themeColor.content = selectedTheme === "dark" ? "#17151c" : "#f6f7f8";
+        }
+      }
+
+      function escapeHTML(value) {
+        return String(value ?? "").replace(
+          /[&<>"']/g,
+          (character) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[character],
+        );
+      }
+
+      function parseImages(value) {
+        if (!value) return [];
+        try {
+          const parsed = JSON.parse(String(value));
+          if (Array.isArray(parsed)) return parsed.filter(Boolean);
+          if (typeof parsed === "string" && parsed) return [parsed];
+        } catch {
+          if (String(value).startsWith("data:image/")) return [String(value)];
+        }
+        return [];
+      }
+
+      function relativeTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "Date unavailable";
+        const minutes = Math.max(
+          0,
+          Math.floor((Date.now() - date.getTime()) / 60000),
+        );
+        if (minutes < 1) return "Just now";
+        if (minutes < 60)
+          return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} day${days === 1 ? "" : "s"} ago`;
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(`/api/${path}`, {
+          method: options.method || "GET",
+          credentials: "same-origin",
+          headers: options.body
+            ? { "Content-Type": "application/json" }
+            : undefined,
+          body: options.body ? JSON.stringify(options.body) : undefined,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok)
+          throw new Error(
+            result.error || "The request could not be completed.",
+          );
+        return result;
+      }
+
+      function render() {
+        const query = searchInput.value.trim().toLowerCase();
+        const filter = filterSelect.value;
+        const shown = ownedPosts.filter((post) => {
+          const photos = parseImages(post.image_data);
+          const hasPhotos = photos.length > 0;
+          const matchesFilter =
+            filter === "all" || (filter === "photos" ? hasPhotos : !hasPhotos);
+          const matchesQuery =
+            !query ||
+            `${post.body || ""} ${photos.length} photos`
+              .toLowerCase()
+              .includes(query);
+          return matchesFilter && matchesQuery;
+        });
+        postCount.textContent = `${ownedPosts.length} post${ownedPosts.length === 1 ? "" : "s"}`;
+        if (!shown.length) {
+          postList.innerHTML = `<div class="empty-state">${ownedPosts.length ? "No posts match this view." : "You haven't shared any posts yet."}</div>`;
+          return;
+        }
+        postList.innerHTML = shown
+          .map((post, index) => {
+            const images = parseImages(post.image_data);
+            const media = images.length
+              ? `<div class="photo-grid">${images
+                  .map(
+                    (src, imageIndex) => `
+            <div class="photo-item">
+              <img src="${escapeHTML(src)}" alt="Photo ${imageIndex + 1} from your post" loading="lazy" />
+              <span class="photo-label">Photo ${imageIndex + 1} of ${images.length}</span>
+              <button class="delete-photo" type="button" data-post-id="${escapeHTML(post.id)}" data-photo-index="${imageIndex}" aria-label="Delete photo ${imageIndex + 1}" title="Delete photo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            </div>`,
+                  )
+                  .join("")}</div>`
+              : "";
+            return `<article class="post-card" data-post-id="${escapeHTML(post.id)}" style="animation-delay:${Math.min(index, 7) * 35}ms">
+            <div class="post-row">
+              <div class="post-copy"><p>${escapeHTML(post.body || "")}</p><time class="post-time" datetime="${escapeHTML(post.created_at || "")}">${escapeHTML(relativeTime(post.created_at))}</time></div>
+              <button class="delete-post" type="button" data-post-id="${escapeHTML(post.id)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                Delete post
+              </button>
+            </div>${media}
+          </article>`;
+          })
+          .join("");
+      }
+
+      function notify(message) {
+        document.querySelector(".toast")?.remove();
+        const toast = document.createElement("div");
+        toast.className = "toast";
+        toast.setAttribute("role", "status");
+        toast.textContent = message;
+        document.body.append(toast);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.remove(), 2600);
+      }
+
+      async function loadPosts() {
+        const result = await api("session");
+        if (!result.authenticated) {
+          document.querySelector("#manager").hidden = true;
+          document.querySelector("#signed-out").hidden = false;
+          postCount.textContent = "";
+          return;
+        }
+        try {
+          applyTheme(localStorage.getItem(`circle-theme-${result.user.id}`));
+        } catch {
+          applyTheme("light");
+        }
+        const postResult = await api("posts");
+        ownedPosts = (postResult.posts || []).filter(
+          (post) => Number(post.user_id) === Number(result.user.id),
+        );
+        render();
+      }
+
+      postList.addEventListener("click", async (event) => {
+        const photoButton = event.target.closest(".delete-photo");
+        const postButton = event.target.closest(".delete-post");
+        if (!photoButton && !postButton) return;
+
+        const postId = Number((photoButton || postButton).dataset.postId);
+        const photoIndex = photoButton
+          ? Number(photoButton.dataset.photoIndex)
+          : null;
+        const confirmation = photoButton
+          ? "Delete this photo from your post?"
+          : "Delete this post and all its photos? This can't be undone.";
+        if (!window.confirm(confirmation)) return;
+
+        const button = photoButton || postButton;
+        button.disabled = true;
+        try {
+          await api("posts", {
+            method: "DELETE",
+            body: photoButton ? { postId, photoIndex } : { postId },
+          });
+          await loadPosts();
+          notify(photoButton ? "Photo deleted." : "Post deleted.");
+        } catch (error) {
+          button.disabled = false;
+          notify(error.message);
+        }
+      });
+
+      searchInput.addEventListener("input", render);
+      filterSelect.addEventListener("change", render);
+      loadPosts().catch((error) => {
+        postCount.textContent = "";
+        postList.innerHTML = `<div class="empty-state">${escapeHTML(error.message)} <a href="/">Return to Circle</a></div>`;
+      });
+    </script>
+  </body>
+</html>

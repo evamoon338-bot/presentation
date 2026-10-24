@@ -10,3 +10,4 @@ database_id = "2545fdc3-34fc-4a86-9006-379fc8273f72"
 [vars]
 SESSION_COOKIE_NAME = "circle_session"
 SESSION_LIFETIME_DAYS = "7"
+APP_ORIGIN = "https://circle-app-9nh.pages.dev"

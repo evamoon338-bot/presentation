@@ -105,7 +105,7 @@ export function sessionCookie(name, value, maxAgeSeconds) {
     "Path=/",
     "HttpOnly",
     "Secure",
-    "SameSite=Strict",
+    "SameSite=None",
     `Max-Age=${maxAgeSeconds}`
   ];
   return parts.join("; ");

@@ -1,9 +1,28 @@
+let corsOrigin = "";
+
+/** Sets the origin echoed back in CORS headers for the current request. */
+export function setCorsOrigin(origin) {
+  corsOrigin = origin || "";
+}
+
+export function corsHeaders() {
+  if (!corsOrigin) return {};
+  return {
+    "Access-Control-Allow-Origin": corsOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin"
+  };
+}
+
 export function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...corsHeaders(),
       ...headers
     }
   });

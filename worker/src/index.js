@@ -3,7 +3,7 @@ import {
   parseCookies,
   SESSION_COOKIE_DEFAULT,
 } from "./auth.js";
-import { json, parseId, BadRequest } from "./http.js";
+import { json, parseId, BadRequest, setCorsOrigin, corsHeaders } from "./http.js";
 import {
   login,
   logout,
@@ -58,7 +58,7 @@ function sameOrigin(request, env) {
   if (!origin) {
     // No Origin header: reject browser-issued cross-site form posts that would
     // otherwise be authenticated by cookies.
-    const secFetchSite = request.headers.get("Sec-Fetch-Site");
+      const secFetchSite = request.headers.get("Sec-Fetch-Site");
     return !secFetchSite || secFetchSite === "same-origin" || secFetchSite === "none";
   }
   const allowed = new Set([new URL(request.url).origin]);
@@ -71,6 +71,13 @@ async function routeRequest(request, env) {
   const { pathname } = url;
   const method = request.method.toUpperCase();
   const cookieName = env.SESSION_COOKIE_NAME || SESSION_COOKIE_DEFAULT;
+
+  const origin = request.headers.get("Origin");
+  if (origin && sameOrigin(request, env)) setCorsOrigin(origin);
+
+  if (pathname.startsWith("/api/") && method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders() });
+  }
 
   if (pathname.startsWith("/api/") && !SAFE_METHODS.has(method) && !sameOrigin(request, env)) {
     return json({ error: "Cross-origin request rejected." }, 403);
