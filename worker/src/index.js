@@ -4,7 +4,6 @@ import {
   SESSION_COOKIE_DEFAULT,
 } from "./auth.js";
 import { json, parseId, BadRequest } from "./http.js";
-import { serveKey } from "./media.js";
 import {
   login,
   logout,
@@ -98,12 +97,6 @@ async function routeRequest(request, env) {
       : json({ authenticated: false });
   }
   if (!user) return json({ error: "Sign in to continue." }, 401);
-
-  const mediaMatch =
-    /^\/media\/(posts|stories)\/([a-f0-9]{32}\.[a-z0-9]+)$/i.exec(pathname);
-  if (mediaMatch && method === "GET") {
-    return serveKey(env, `${mediaMatch[1]}/${mediaMatch[2]}`);
-  }
 
   if (pathname === "/api/settings" && method === "GET")
     return settingsGet(user);

@@ -4748,7 +4748,17 @@
         }
       }
 
+      // The server stores photos inline in D1, which caps a row near 2 MB.
+      const MAX_PHOTO_BYTES = 600 * 1024;
+
       function readFileAsDataUrl(file) {
+        if (file && file.size > MAX_PHOTO_BYTES) {
+          return Promise.reject(
+            new Error(
+              `That photo is ${Math.round(file.size / 1024)} KB. Please choose one under 600 KB.`,
+            ),
+          );
+        }
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result || ""));

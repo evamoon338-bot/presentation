@@ -2,7 +2,6 @@ import { all, first, run } from "../db.js";
 import { json, readJson, parseId } from "../http.js";
 import {
   storeDataUrl,
-  deleteKey,
   parseKeyList,
   serializeKeyList,
   exposeKeyList,
@@ -81,11 +80,8 @@ export async function createPost(env, request, user) {
 
   let imageKey = "";
   if (imageData) {
-    if (imageData.length > 20000000) {
-      return json({ error: "Media uploads must be smaller than 20 MB each." }, 400);
-    }
     try {
-      imageKey = (await storeDataUrl(env, imageData, "posts")) || "";
+      imageKey = storeDataUrl(imageData);
     } catch (error) {
       return json({ error: error.message }, 400);
     }
@@ -131,7 +127,7 @@ export async function deletePost(env, request, user) {
       return json({ error: "Selected photo not found." }, 400);
     }
 
-    await deleteKey(env, imageKeys[imageIndex]);
+    
     const remainingImages = imageKeys.filter((_, index) => index !== imageIndex);
     // Audio entries are only index-aligned when the lists have the same
     // length; otherwise removing by index would drop an unrelated track.
@@ -162,8 +158,8 @@ export async function deletePost(env, request, user) {
     return json({ post: shapePost(updated) });
   }
 
-  for (const key of parseKeyList(row.image_data)) await deleteKey(env, key);
-  for (const key of parseKeyList(row.audio_data)) await deleteKey(env, key);
+  
+  
   await run(env, "DELETE FROM posts WHERE id=? AND user_id=?", postId, user.id);
   return json({ deleted: true, postId });
 }

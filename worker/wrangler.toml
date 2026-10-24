@@ -7,10 +7,6 @@ binding = "DB"
 database_name = "circle"
 database_id = "2545fdc3-34fc-4a86-9006-379fc8273f72"
 
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "circle-media"
-
 [vars]
 SESSION_COOKIE_NAME = "circle_session"
 SESSION_LIFETIME_DAYS = "7"

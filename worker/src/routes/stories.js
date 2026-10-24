@@ -2,7 +2,6 @@ import { all, first, run } from "../db.js";
 import { json, readJson, parseId } from "../http.js";
 import {
   storeDataUrl,
-  deleteKey,
   exposeKeyList,
   isVideoDataUrl,
   UNSUPPORTED_VIDEO_MESSAGE
@@ -42,11 +41,8 @@ export async function createStory(env, request, user) {
   const body = await readJson(request);
   let mediaData = String(body.mediaData ?? "");
   if (!mediaData && body.imageData) mediaData = String(body.imageData);
-  if (!mediaData) return json({ error: "A story needs a photo or video." }, 400);
+  if (!mediaData) return json({ error: "A story needs a photo." }, 400);
   if (isVideoDataUrl(mediaData)) return json({ error: UNSUPPORTED_VIDEO_MESSAGE }, 400);
-  if (mediaData.length > 20000000) {
-    return json({ error: "Story media must be smaller than 20 MB." }, 400);
-  }
 
   const caption = String(body.caption ?? "").trim();
   if (caption.length > 200) {
@@ -55,11 +51,11 @@ export async function createStory(env, request, user) {
 
   let mediaKey;
   try {
-    mediaKey = await storeDataUrl(env, mediaData, "stories");
+    mediaKey = storeDataUrl(mediaData);
   } catch (error) {
     return json({ error: error.message }, 400);
   }
-  if (!mediaKey) return json({ error: "A story needs a photo or video." }, 400);
+  if (!mediaKey) return json({ error: "A story needs a photo." }, 400);
 
   const result = await run(
     env,
@@ -135,8 +131,8 @@ export async function deleteStory(env, user, storyId) {
   );
   if (!row) return json({ error: "Story not found." }, 404);
   if (row.user_id !== user.id) return json({ error: "You can only delete your own stories." }, 403);
-  await deleteKey(env, row.media_data);
-  await deleteKey(env, row.audio_data);
+  
+  
   await run(env, "DELETE FROM stories WHERE id=? AND user_id=?", storyId, user.id);
   return json({ deleted: true, storyId });
 }
