@@ -1,0 +1,16 @@
+name = "circle"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "circle"
+database_id = "3452f08da607a99118131ee2663e54a1"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "circle-media"
+
+[vars]
+SESSION_COOKIE_NAME = "circle_session"
+SESSION_LIFETIME_DAYS = "7"

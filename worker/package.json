@@ -1,0 +1,15 @@
+{
+  "name": "circle-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute circle --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute circle --remote --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
