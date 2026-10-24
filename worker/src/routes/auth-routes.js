@@ -9,10 +9,11 @@ import {
 } from "../auth.js";
 import { json, jsonWithCookie, readJson, isEmail } from "../http.js";
 
-const PUBLIC_USER_COLUMNS =
-  "id,email,display_name,profile_photo,about_me,audience,email_notifications,product_updates,show_email";
-
 const MAX_PASSWORD_LENGTH = 256;
+
+/** Columns returned to clients; never includes secrets. */
+export const PUBLIC_USER_COLUMNS =
+  "id,email,display_name,profile_photo,about_me,audience,email_notifications,product_updates,show_email";
 const PROFILE_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_PROFILE_PHOTO_CHARS = 700000;
 
@@ -112,11 +113,20 @@ export async function login(env, request, cookieName) {
     "SELECT id,password_salt,password_hash FROM users WHERE email=? LIMIT 1",
     email
   );
-  const valid = row
+  // Google-only accounts have no password hash; treat them like a wrong
+  // password and point the user at Google sign-in instead.
+  const hasPassword = !!(row && row.password_salt && row.password_hash);
+  const valid = hasPassword
     ? await verifyPassword(password, row.password_salt, row.password_hash)
     : (await verifyPassword(password, DUMMY_SALT, DUMMY_HASH), false);
   if (!valid || !row) {
     recordAttempt(attemptKey);
+    if (row && !hasPassword) {
+      return json(
+        { error: "This account uses Google sign-in. Continue with Google instead." },
+        401
+      );
+    }
     return json({ error: "Email or password is incorrect." }, 401);
   }
 
@@ -198,7 +208,17 @@ export async function passwordUpdate(env, request, user, cookieName) {
     "SELECT password_salt,password_hash FROM users WHERE id=? LIMIT 1",
     user.id
   );
-  const valid = row && (await verifyPassword(String(body.currentPassword ?? ""), row.password_salt, row.password_hash));
+  if (!row || !row.password_salt || !row.password_hash) {
+    return json(
+      { error: "This account signs in with Google, so it has no password to change." },
+      400
+    );
+  }
+  const valid = await verifyPassword(
+    String(body.currentPassword ?? ""),
+    row.password_salt,
+    row.password_hash
+  );
   if (!valid) return json({ error: "Current password is incorrect." }, 400);
 
   const newPassword = String(body.newPassword ?? "");

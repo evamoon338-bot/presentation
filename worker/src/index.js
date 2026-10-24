@@ -34,6 +34,7 @@ import {
   listNotifications,
   markNotificationsRead,
 } from "./routes/notifications.js";
+import { googleStart, googleCallback } from "./routes/google-auth.js";
 import {
   acceptFriendRequest,
   createFriendRequest,
@@ -95,6 +96,12 @@ async function routeRequest(request, env) {
   if (pathname === "/api/logout" && method === "POST") {
     const token = parseCookies(request)[cookieName];
     return logout(env, request, cookieName, token);
+  }
+  if (pathname === "/api/auth/google" && method === "GET") {
+    return googleStart(env, request);
+  }
+  if (pathname === "/api/auth/google/callback" && method === "GET") {
+    return googleCallback(env, request);
   }
 
   const user = await getCurrentUser(env, request, cookieName);

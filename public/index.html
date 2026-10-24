@@ -2877,6 +2877,27 @@
         color: #a3443a !important;
         font-size: 12px !important;
       }
+      .auth-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 42px;
+        margin-top: 10px;
+        border: 1px solid #d7dbe3;
+        border-radius: 6px;
+        background: white;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .auth-google:hover {
+        background: #f6f8fb;
+      }
+      .auth-google[hidden] {
+        display: none;
+      }
       @media (max-width: 700px) {
         #auth-gate:not([hidden]) {
           min-height: 100svh;
@@ -3575,6 +3596,7 @@
             /></label>
             <button class="auth-submit" type="submit">Sign in</button>
           </form>
+          <a class="auth-google" id="google-signin" href="#">Continue with Google</a>
           <form class="auth-form" id="register-form" hidden>
             <label
               >Your name<input
@@ -4724,7 +4746,31 @@
         authGate.hidden = false;
         const badge = document.querySelector(".notification-dot");
         if (badge) badge.hidden = true;
+        const google = document.querySelector("#google-signin");
+        if (google) google.href = `${API_BASE}/api/auth/google`;
         document.querySelector("#auth-status").textContent = message;
+      }
+
+      // Messages for the ?authError= codes the Google callback redirects with.
+      const GOOGLE_AUTH_ERRORS = {
+        use_password:
+          "That email already has a Circle account with a password. Sign in with your password instead.",
+        google_cancelled: "Google sign-in was cancelled.",
+        google_state_mismatch:
+          "Google sign-in could not be verified. Please try again.",
+        google_unavailable: "Google sign-in is not configured right now.",
+        google_failed: "Google sign-in did not complete. Please try again.",
+      };
+
+      function googleAuthError() {
+        const code = new URLSearchParams(window.location.search).get(
+          "authError",
+        );
+        if (!code) return "";
+        const url = new URL(window.location.href);
+        url.searchParams.delete("authError");
+        window.history.replaceState({}, "", url.toString());
+        return GOOGLE_AUTH_ERRORS[code] || GOOGLE_AUTH_ERRORS.google_failed;
       }
 
       function getProfilePhotoUrl(
@@ -7159,7 +7205,7 @@
           if (session.authenticated) {
             await startAuthenticatedSession(session.user);
           } else {
-            showAuth();
+            showAuth(googleAuthError());
           }
         } catch {
           showAuth("Start the Circle server, then reload this page.");
