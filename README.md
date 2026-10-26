@@ -20,6 +20,18 @@ Run the backend startup and database checks with:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\server.ps1 -Check
 ```
 
+## Android app
+
+The Android app is a lightweight Trusted Web Activity that opens the hosted Circle site in Chrome. A recent JDK, Android SDK Platform 35, and Android Build Tools 35 are required to build it.
+
+From the `android` folder, build an installable debug APK with:
+
+```powershell
+.\gradlew.bat assembleDebug
+```
+
+The APK is created at `android\app\build\outputs\apk\debug\app-debug.apk`. The hosted site must serve `/.well-known/assetlinks.json` with the app's signing-certificate fingerprint for Chrome to open it full-screen.
+
 ## Security scope
 
 Passwords are salted and hashed with PBKDF2-HMAC-SHA256. Session identifiers are random, stored as hashes in SQLite, and sent in HTTP-only, same-site cookies. The default server binds to `127.0.0.1` and is intended for local development only. Do not expose it to the internet or use real credentials without HTTPS, deployment hardening, backups, and an appropriately hosted application server.

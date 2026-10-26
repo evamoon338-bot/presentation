@@ -3,3 +3,8 @@ node_modules/
 .wrangler/
 .dev.vars
 *.log
+android/.gradle/
+android/local.properties
+android/app/build/
+android/*.keystore
+android/keystore.properties

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kwasuite.circle",
+      "sha256_cert_fingerprints": [
+        "1D:46:5C:2B:58:76:A1:11:76:F6:9C:88:81:34:9B:4A:32:C5:E8:46:5A:1F:6A:06:63:29:4A:05:61:F3:ED:76"
+      ]
+    }
+  }
+]
