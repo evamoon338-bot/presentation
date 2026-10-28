@@ -13,7 +13,7 @@ const MAX_PASSWORD_LENGTH = 256;
 
 /** Columns returned to clients; never includes secrets. */
 export const PUBLIC_USER_COLUMNS =
-  "id,email,display_name,profile_photo,about_me,audience,email_notifications,product_updates,show_email";
+  "id,email,display_name,profile_photo,cover_photo,about_me,audience,email_notifications,product_updates,show_email,is_verified";
 const PROFILE_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_PROFILE_PHOTO_CHARS = 700000;
 
@@ -123,7 +123,10 @@ export async function login(env, request, cookieName) {
     recordAttempt(attemptKey);
     if (row && !hasPassword) {
       return json(
-        { error: "This account uses Google sign-in. Continue with Google instead." },
+        {
+          error: "This account uses Google sign-in. Continue with Google instead.",
+          code: "google_sign_in_required",
+        },
         401
       );
     }
@@ -152,6 +155,7 @@ export async function settingsUpdate(env, request, user) {
   const aboutMe = String(body.aboutMe ?? "").trim();
   const audience = String(body.audience ?? "");
   const profilePhoto = String(body.profilePhoto ?? "");
+  const coverPhoto = String(body.coverPhoto ?? user.cover_photo ?? "");
 
   if (!isEmail(email)) return json({ error: "Enter a valid email address." }, 400);
   if (displayName.length < 1 || displayName.length > 60) {
@@ -165,11 +169,12 @@ export async function settingsUpdate(env, request, user) {
   }
 
   const normalizedPhoto = normalizeProfilePhoto(profilePhoto);
-  if (normalizedPhoto === null) {
+  const normalizedCoverPhoto = normalizeProfilePhoto(coverPhoto);
+  if (normalizedPhoto === null || normalizedCoverPhoto === null) {
     return json(
       {
         error:
-          "Profile photos must be a JPEG, PNG, WebP, or GIF image under 700 KB."
+          "Profile and banner photos must be JPEG, PNG, WebP, or GIF images under 700 KB."
       },
       400
     );
@@ -185,10 +190,11 @@ export async function settingsUpdate(env, request, user) {
 
   await run(
     env,
-    `UPDATE users SET email=?,display_name=?,profile_photo=?,about_me=?,audience=?,email_notifications=?,product_updates=?,show_email=? WHERE id=?`,
+    `UPDATE users SET email=?,display_name=?,profile_photo=?,cover_photo=?,about_me=?,audience=?,email_notifications=?,product_updates=?,show_email=? WHERE id=?`,
     email,
     displayName,
     normalizedPhoto || null,
+    normalizedCoverPhoto || null,
     aboutMe,
     audience,
     body.emailNotifications ? 1 : 0,
@@ -197,7 +203,21 @@ export async function settingsUpdate(env, request, user) {
     user.id
   );
 
-  const updated = await first(env, `SELECT ${PUBLIC_USER_COLUMNS} FROM users WHERE id=?`, user.id);
+  const updated = await first(
+    env,
+    `SELECT ${PUBLIC_USER_COLUMNS},
+      CASE WHEN lower(users.email)=lower(?) AND (
+        users.google_sub IS NOT NULL OR EXISTS (
+          SELECT 1 FROM sessions s
+          JOIN manager_access_sessions mas ON mas.token_hash=s.token_hash
+          WHERE s.user_id=users.id
+            AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        )
+      ) THEN 1 ELSE 0 END AS is_verification_manager
+    FROM users WHERE id=?`,
+    env.VERIFICATION_MANAGER_EMAIL || "",
+    user.id
+  );
   return json({ user: updated });
 }
 

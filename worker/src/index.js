@@ -31,10 +31,26 @@ import {
   storyViewers,
 } from "./routes/stories.js";
 import {
+  clearNotifications,
   listNotifications,
   markNotificationsRead,
 } from "./routes/notifications.js";
 import { googleStart, googleCallback } from "./routes/google-auth.js";
+import { pushPublicKey, subscribePush, unsubscribePush } from "./routes/push.js";
+import { loginVerificationManager } from "./routes/manager-passphrase-auth.js";
+import {
+  createGroupConversation,
+  handleVoiceCall,
+  listGroupConversations,
+  listGroupMessages,
+  mutateMessage,
+  sendGroupMessage,
+  touchPresence,
+} from "./routes/messaging.js";
+import {
+  lookupVerificationUser,
+  setVerificationBadge,
+} from "./routes/verification.js";
 import {
   acceptFriendRequest,
   createFriendRequest,
@@ -103,6 +119,9 @@ async function routeRequest(request, env) {
   if (pathname === "/api/auth/google/callback" && method === "GET") {
     return googleCallback(env, request);
   }
+  if (pathname === "/api/auth/manager-passphrase" && method === "POST") {
+    return loginVerificationManager(env, request, cookieName);
+  }
 
   const user = await getCurrentUser(env, request, cookieName);
   if (pathname === "/api/session" && method === "GET") {
@@ -112,6 +131,48 @@ async function routeRequest(request, env) {
   }
   if (!user) return json({ error: "Sign in to continue." }, 401);
 
+  if (pathname === "/api/calls" && (method === "GET" || method === "POST")) {
+    return handleVoiceCall(env, request, url, user);
+  }
+  if (pathname === "/api/message-groups" && method === "GET") {
+    return listGroupConversations(env, user);
+  }
+  if (pathname === "/api/message-groups" && method === "POST") {
+    return createGroupConversation(env, request, user);
+  }
+  if (pathname === "/api/presence" && method === "POST") {
+    return touchPresence(env, request, user);
+  }
+  if (pathname === "/api/push/public-key" && method === "GET") {
+    return pushPublicKey(env);
+  }
+  if (pathname === "/api/push/subscribe" && method === "POST") {
+    return subscribePush(env, request, user);
+  }
+  if (pathname === "/api/push/unsubscribe" && method === "POST") {
+    return unsubscribePush(env, request, user);
+  }
+  const groupMessageMatch = /^\/api\/message-groups\/(\d+)\/messages$/.exec(pathname);
+  if (groupMessageMatch) {
+    const conversationId = parseId(groupMessageMatch[1]);
+    if (!conversationId) return notFound();
+    if (method === "GET") return listGroupMessages(env, conversationId, user);
+    if (method === "POST") return sendGroupMessage(env, request, conversationId, user);
+  }
+  const messageActionMatch = /^\/api\/messages\/(\d+)\/actions$/.exec(pathname);
+  if (messageActionMatch && method === "POST") {
+    const messageId = parseId(messageActionMatch[1]);
+    return messageId ? mutateMessage(env, request, messageId, user) : notFound();
+  }
+  const groupMessageActionMatch =
+    /^\/api\/group-messages\/(\d+)\/actions$/.exec(pathname);
+  if (groupMessageActionMatch && method === "POST") {
+    const messageId = parseId(groupMessageActionMatch[1]);
+    return messageId
+      ? mutateMessage(env, request, messageId, user, true)
+      : notFound();
+  }
+
   if (pathname === "/api/settings" && method === "GET")
     return settingsGet(user);
   if (pathname === "/api/settings" && method === "PUT") {
@@ -120,10 +181,19 @@ async function routeRequest(request, env) {
   if (pathname === "/api/password" && method === "PUT") {
     return passwordUpdate(env, request, user, cookieName);
   }
+  if (pathname === "/api/verification/users" && method === "GET") {
+    return lookupVerificationUser(env, url, user);
+  }
+  if (pathname === "/api/verification/badge" && method === "POST") {
+    return setVerificationBadge(env, request, user);
+  }
   if (pathname === "/api/notifications" && method === "GET")
     return listNotifications(env, url, user);
   if (pathname === "/api/notifications/read" && method === "POST") {
     return markNotificationsRead(env, request, user);
+  }
+  if (pathname === "/api/notifications" && method === "DELETE") {
+    return clearNotifications(env, user);
   }
   if (pathname === "/api/friends" && method === "GET")
     return listFriends(env, user);
@@ -144,7 +214,7 @@ async function routeRequest(request, env) {
     return setEventRsvp(env, request, user);
   }
   if (pathname === "/api/messages" && method === "GET")
-    return listMessages(env, user);
+    return listMessages(env, user, url);
   if (pathname === "/api/messages" && method === "POST") {
     return sendMessage(env, request, user);
   }

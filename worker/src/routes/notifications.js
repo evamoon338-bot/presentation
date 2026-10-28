@@ -1,7 +1,17 @@
 import { all, first, run } from "../db.js";
 import { json, readJson, parseId } from "../http.js";
+import { sendPushToUser } from "./push.js";
 
 const LIST_LIMIT = 50;
+
+function pushUrlFor(type, actorId) {
+  if (type === "message" || type === "call" || type === "group_message") {
+    return "/?view=messages" + (actorId ? `&user=${actorId}` : "");
+  }
+  if (type === "like" || type === "comment" || type === "share") return "/?view=notifications";
+  if (type === "friend_request" || type === "friend_accept") return "/?view=friends";
+  return "/?view=notifications";
+}
 
 /**
  * Records a notification for another user. Never throws: notification
@@ -23,7 +33,18 @@ export async function notifyUser(env, { userId, actorId, type, entityType = "", 
     );
   } catch (error) {
     console.error("Notification insert failed:", error);
+    return;
   }
+
+  const isCall = type === "call";
+  await sendPushToUser(env, userId, {
+    title: isCall ? "Incoming call" : "Yap",
+    body: message,
+    type,
+    tag: isCall ? `call-${actorId || 0}` : `n-${type}-${entityId || 0}`,
+    url: pushUrlFor(type, actorId),
+    icon: "/icons/circle-192.png",
+  });
 }
 
 function shapeNotification(row) {
@@ -80,6 +101,11 @@ export async function listNotifications(env, url, user) {
     latestId: latest?.latest || 0,
     since
   });
+}
+
+export async function clearNotifications(env, user) {
+  await run(env, "DELETE FROM notifications WHERE user_id=?", user.id);
+  return json({ unreadCount: 0 });
 }
 
 export async function markNotificationsRead(env, request, user) {

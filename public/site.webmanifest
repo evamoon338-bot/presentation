@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Circle",
-  "short_name": "Circle",
-  "description": "Find your people and share what matters.",
+  "name": "Yap 😉",
+  "short_name": "Yap",
+  "description": "Yap with your people and share what matters.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

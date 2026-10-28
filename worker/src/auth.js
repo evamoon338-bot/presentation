@@ -138,8 +138,8 @@ export async function getCurrentUser(env, request, cookieName) {
   if (!token) return null;
   const tokenHash = await sha256Base64(token);
   const row = await env.DB.prepare(
-    "SELECT u.id,u.email,u.display_name,u.profile_photo,u.about_me,u.audience,u.email_notifications,u.product_updates,u.show_email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 1"
-  ).bind(tokenHash).first();
+    "SELECT u.id,u.email,u.display_name,u.profile_photo,u.cover_photo,u.about_me,u.audience,u.email_notifications,u.product_updates,u.show_email,u.is_verified,CASE WHEN lower(u.email)=lower(?) AND (u.google_sub IS NOT NULL OR mas.token_hash IS NOT NULL) THEN 1 ELSE 0 END AS is_verification_manager FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN manager_access_sessions mas ON mas.token_hash=s.token_hash WHERE s.token_hash=? AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 1"
+  ).bind(env.VERIFICATION_MANAGER_EMAIL || "", tokenHash).first();
   return row || null;
 }
 

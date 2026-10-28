@@ -16,7 +16,7 @@ async function postOwner(env, postId) {
   return row?.user_id || 0;
 }
 
-const POST_COLUMNS = `p.id,p.user_id,u.display_name,u.profile_photo,u.about_me,u.audience,p.body,p.image_data,p.audio_data,p.created_at`;
+const POST_COLUMNS = `p.id,p.user_id,u.display_name,u.profile_photo,u.cover_photo,u.about_me,u.audience,u.is_verified,p.body,p.image_data,p.audio_data,p.created_at`;
 
 /** Returns a non-negative array index, or -1 when the value is not one. */
 function parseIndex(value) {
@@ -200,7 +200,7 @@ export async function listComments(env, user, postId) {
   }
   const comments = await all(
     env,
-    "SELECT pc.id,pc.body,pc.created_at,u.display_name,u.profile_photo FROM post_comments pc JOIN users u ON u.id=pc.user_id WHERE pc.post_id=? ORDER BY pc.created_at ASC,pc.id ASC LIMIT 100",
+    "SELECT pc.id,pc.body,pc.created_at,u.display_name,u.profile_photo,u.is_verified FROM post_comments pc JOIN users u ON u.id=pc.user_id WHERE pc.post_id=? ORDER BY pc.created_at ASC,pc.id ASC LIMIT 100",
     postId
   );
   return json({ postId, comments });
@@ -224,7 +224,7 @@ export async function addComment(env, request, user, postId) {
   );
   const comment = await first(
     env,
-    "SELECT id,post_id,user_id,body,created_at FROM post_comments WHERE id=?",
+    "SELECT pc.id,pc.post_id,pc.user_id,pc.body,pc.created_at,u.display_name,u.profile_photo,u.is_verified FROM post_comments pc JOIN users u ON u.id=pc.user_id WHERE pc.id=?",
     result.meta.last_row_id
   );
   const count = await first(env, "SELECT COUNT(*) AS total FROM post_comments WHERE post_id=?", postId);

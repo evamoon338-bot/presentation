@@ -186,7 +186,7 @@ export async function googleCallback(env, request) {
   if (!tokens || !tokens.id_token) return appRedirect(env, "google_failed");
 
   const profile = await verifyIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID);
-  if (!profile || !profile.email || profile.email_verified === false) {
+  if (!profile || !profile.email || profile.email_verified !== true) {
     return appRedirect(env, "google_failed");
   }
 

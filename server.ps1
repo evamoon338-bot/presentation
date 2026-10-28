@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_salt TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   profile_photo TEXT,
+  cover_photo TEXT,
   about_me TEXT NOT NULL DEFAULT '',
   audience TEXT NOT NULL DEFAULT 'friends',
   email_notifications INTEGER NOT NULL DEFAULT 1,
@@ -180,6 +181,7 @@ DELETE FROM sessions WHERE expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now');
 "@
   Invoke-Database $schema | Out-Null
   Ensure-Column "users" "profile_photo" "TEXT"
+  Ensure-Column "users" "cover_photo" "TEXT"
   Ensure-Column "users" "about_me" "TEXT NOT NULL DEFAULT ''"
   Ensure-Column "users" "show_email" "INTEGER NOT NULL DEFAULT 0"
   Ensure-Column "posts" "image_data" "TEXT"
@@ -365,7 +367,7 @@ function Get-CurrentUser($Request) {
   $cookie = $Request.Cookies[$script:SessionCookieName]
   if ($null -eq $cookie -or [string]::IsNullOrWhiteSpace($cookie.Value)) { return $null }
   $tokenHash = ConvertTo-SqlText (Get-Sha256 $cookie.Value)
-  $rows = @(Invoke-Database "SELECT u.id,u.email,u.display_name,u.profile_photo,u.about_me,u.audience,u.email_notifications,u.product_updates,u.show_email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$tokenHash AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 1;")
+  $rows = @(Invoke-Database "SELECT u.id,u.email,u.display_name,u.profile_photo,u.cover_photo,u.about_me,u.audience,u.email_notifications,u.product_updates,u.show_email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$tokenHash AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 1;")
   if ($rows.Count -eq 0) { return $null }
   return $rows[0]
 }
@@ -443,7 +445,7 @@ function Handle-Request($Context) {
     }
     $credentials = New-PasswordCredentials $password
     try {
-      $rows = @(Invoke-Database "INSERT INTO users(email,display_name,password_salt,password_hash,profile_photo) VALUES($(ConvertTo-SqlText $email),$(ConvertTo-SqlText $displayName),$(ConvertTo-SqlText $credentials.Salt),$(ConvertTo-SqlText $credentials.Hash),NULL) RETURNING id,email,display_name,profile_photo,audience,email_notifications,product_updates,show_email;")
+      $rows = @(Invoke-Database "INSERT INTO users(email,display_name,password_salt,password_hash,profile_photo) VALUES($(ConvertTo-SqlText $email),$(ConvertTo-SqlText $displayName),$(ConvertTo-SqlText $credentials.Salt),$(ConvertTo-SqlText $credentials.Hash),NULL) RETURNING id,email,display_name,profile_photo,cover_photo,audience,email_notifications,product_updates,show_email;")
     } catch {
       if ($_.Exception.Message -match "UNIQUE constraint failed") {
         Write-Json $Context 409 @{ error = "An account with this email already exists." }
@@ -459,13 +461,13 @@ function Handle-Request($Context) {
   if ($path -eq "/api/login" -and $request.HttpMethod -eq "POST") {
     $body = Get-RequestBody $request
     $email = ([string]$body.email).Trim().ToLowerInvariant()
-    $rows = @(Invoke-Database "SELECT id,email,display_name,password_salt,password_hash,profile_photo,audience,email_notifications,product_updates,show_email FROM users WHERE email=$(ConvertTo-SqlText $email) LIMIT 1;")
+    $rows = @(Invoke-Database "SELECT id,email,display_name,password_salt,password_hash,profile_photo,cover_photo,audience,email_notifications,product_updates,show_email FROM users WHERE email=$(ConvertTo-SqlText $email) LIMIT 1;")
     if ($rows.Count -eq 0 -or -not (Test-Password ([string]$body.password) $rows[0].password_salt $rows[0].password_hash)) {
       Write-Json $Context 401 @{ error = "Email or password is incorrect." }
       return
     }
     New-Session $response ([int64]$rows[0].id)
-    $user = $rows[0] | Select-Object id,email,display_name,profile_photo,audience,email_notifications,product_updates,show_email
+    $user = $rows[0] | Select-Object id,email,display_name,profile_photo,cover_photo,audience,email_notifications,product_updates,show_email
     Write-Json $Context 200 @{ user = $user }
     return
   }
@@ -508,6 +510,7 @@ function Handle-Request($Context) {
     $aboutMe = ([string]$body.aboutMe).Trim()
     $audience = [string]$body.audience
     $profilePhotoValue = [string]$body.profilePhoto
+    $coverPhotoValue = if ($null -ne $body.coverPhoto) { [string]$body.coverPhoto } else { [string]$user.cover_photo }
     if ([string]::IsNullOrWhiteSpace($profilePhotoValue)) {
       $profilePhotoSql = "NULL"
     } elseif ($profilePhotoValue.Length -gt 700000) {
@@ -515,6 +518,14 @@ function Handle-Request($Context) {
       return
     } else {
       $profilePhotoSql = $(ConvertTo-SqlText $profilePhotoValue)
+    }
+    if ([string]::IsNullOrWhiteSpace($coverPhotoValue)) {
+      $coverPhotoSql = "NULL"
+    } elseif ($coverPhotoValue.Length -gt 700000 -or $coverPhotoValue -notmatch '^data:image/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$') {
+      Write-Json $Context 400 @{ error = "Profile and banner photos must be JPEG, PNG, WebP, or GIF images under 700 KB." }
+      return
+    } else {
+      $coverPhotoSql = $(ConvertTo-SqlText $coverPhotoValue)
     }
     if ($email -notmatch '^[^\s@]+@[^\s@]+\.[^\s@]+$' -or $email.Length -gt 254) {
       Write-Json $Context 400 @{ error = "Enter a valid email address." }
@@ -533,7 +544,7 @@ function Handle-Request($Context) {
       return
     }
     try {
-      Invoke-Database "UPDATE users SET email=$(ConvertTo-SqlText $email),display_name=$(ConvertTo-SqlText $displayName),profile_photo=$profilePhotoSql,about_me=$(ConvertTo-SqlText $aboutMe),audience=$(ConvertTo-SqlText $audience),email_notifications=$([int][bool]$body.emailNotifications),product_updates=$([int][bool]$body.productUpdates),show_email=$([int][bool]$body.showEmail) WHERE id=$($user.id);" | Out-Null
+      Invoke-Database "UPDATE users SET email=$(ConvertTo-SqlText $email),display_name=$(ConvertTo-SqlText $displayName),profile_photo=$profilePhotoSql,cover_photo=$coverPhotoSql,about_me=$(ConvertTo-SqlText $aboutMe),audience=$(ConvertTo-SqlText $audience),email_notifications=$([int][bool]$body.emailNotifications),product_updates=$([int][bool]$body.productUpdates),show_email=$([int][bool]$body.showEmail) WHERE id=$($user.id);" | Out-Null
     } catch {
       if ($_.Exception.Message -match "UNIQUE constraint failed") {
         Write-Json $Context 409 @{ error = "That email is already used by another account." }
@@ -541,7 +552,7 @@ function Handle-Request($Context) {
       }
       throw
     }
-    $updated = @(Invoke-Database "SELECT id,email,display_name,profile_photo,about_me,audience,email_notifications,product_updates,show_email FROM users WHERE id=$($user.id);")[0]
+    $updated = @(Invoke-Database "SELECT id,email,display_name,profile_photo,cover_photo,about_me,audience,email_notifications,product_updates,show_email FROM users WHERE id=$($user.id);")[0]
     Write-Json $Context 200 @{ user = $updated }
     return
   }
@@ -566,7 +577,7 @@ function Handle-Request($Context) {
   }
 
   if ($path -eq "/api/posts" -and $request.HttpMethod -eq "GET") {
-    $rows = @(Invoke-Database "SELECT p.id,p.user_id,u.display_name,u.profile_photo,u.about_me,u.audience,p.body,p.image_data,p.audio_data,p.created_at,COALESCE((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id=p.id),0) AS like_count,COALESCE((SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id=p.id),0) AS comment_count,COALESCE((SELECT COUNT(*) FROM post_shares ps WHERE ps.post_id=p.id),0) AS share_count,CASE WHEN EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$($user.id)) THEN 1 ELSE 0 END AS liked_by_me FROM posts p JOIN users u ON u.id=p.user_id WHERE u.audience='public' OR p.user_id=$($user.id) OR u.id IN (SELECT target_id FROM friend_requests WHERE requester_id=$($user.id) AND status='accepted') ORDER BY p.id DESC LIMIT 100;")
+    $rows = @(Invoke-Database "SELECT p.id,p.user_id,u.display_name,u.profile_photo,u.cover_photo,u.about_me,u.audience,p.body,p.image_data,p.audio_data,p.created_at,COALESCE((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id=p.id),0) AS like_count,COALESCE((SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id=p.id),0) AS comment_count,COALESCE((SELECT COUNT(*) FROM post_shares ps WHERE ps.post_id=p.id),0) AS share_count,CASE WHEN EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$($user.id)) THEN 1 ELSE 0 END AS liked_by_me FROM posts p JOIN users u ON u.id=p.user_id WHERE u.audience='public' OR p.user_id=$($user.id) OR u.id IN (SELECT target_id FROM friend_requests WHERE requester_id=$($user.id) AND status='accepted') ORDER BY p.id DESC LIMIT 100;")
     Write-Json $Context 200 @{ posts = $rows }
     return
   }

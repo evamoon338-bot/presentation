@@ -8,3 +8,5 @@ android/local.properties
 android/app/build/
 android/*.keystore
 android/keystore.properties
+.idea/
+worker/file.jpe
